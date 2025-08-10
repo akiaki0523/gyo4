@@ -1,9 +1,9 @@
 name: Run save.py (manual or schedule)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:           # 手動実行
   schedule:
-    - cron: "*/10 * * * *"  # 10分ごと
+    - cron: "*/10 * * * *"     # 10分ごとに自動実行（必要なら変更）
 
 jobs:
   run-python:
