@@ -1,44 +1,73 @@
+import sys
 import os
+import re
 import requests
+import shutil
 from datetime import datetime
+from bs4 import BeautifulSoup
 
-# 保存先フォルダ
-SAVE_DIR = "data"
-os.makedirs(SAVE_DIR, exist_ok=True)
+URLS_FILE = "urls.txt"
+DATA_DIR = "data"
+ARCHIVE_URL = "https://web.archive.org/save/"
 
-# 保存対象URL（スレッドURLを入れる）
-URLS = [
-    "https://example.com/thread1",
-    "https://example.com/thread2"
-]
+def load_urls():
+    if not os.path.exists(URLS_FILE):
+        return []
+    with open(URLS_FILE, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
 
-# 容量上限（MB）
-MAX_SIZE_MB = 800  # 1GBに近づく前にアラート
+def safe_folder_name(url):
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', url.replace('https://', '').replace('http://', ''))
 
-def get_repo_size_mb():
-    total_size = 0
-    for dirpath, _, filenames in os.walk(SAVE_DIR):
-        for f in filenames:
-            fp = os.path.join(dirpath, f)
-            total_size += os.path.getsize(fp)
-    return total_size / (1024 * 1024)
+def save_html(url):
+    folder_path = os.path.join(DATA_DIR, safe_folder_name(url))
+    os.makedirs(folder_path, exist_ok=True)
 
-def save_snapshot(url):
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    response.encoding = response.apparent_encoding
+    html = response.text
+
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    file_path = os.path.join(folder_path, f"{timestamp}.html")
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"[保存完了] {file_path}")
+    return folder_path
+
+def send_to_archive(url):
     try:
-        r = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_name = url.replace("https://", "").replace("http://", "").replace("/", "_")
-        file_path = os.path.join(SAVE_DIR, f"{safe_name}_{now}.html")
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(r.text)
-        print(f"保存完了: {file_path}")
+        r = requests.get(ARCHIVE_URL + url, headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code == 200:
+            print(f"[Archive.org] 保存リクエスト成功: {url}")
+        else:
+            print(f"[Archive.org] 保存失敗: {url} ({r.status_code})")
     except Exception as e:
-        print(f"保存失敗: {url} - {e}")
+        print(f"[Archive.org] エラー: {e}")
+
+def remove_unused_folders(valid_urls):
+    valid_folders = {safe_folder_name(url) for url in valid_urls}
+    if not os.path.exists(DATA_DIR):
+        return
+    for folder in os.listdir(DATA_DIR):
+        folder_path = os.path.join(DATA_DIR, folder)
+        if os.path.isdir(folder_path) and folder not in valid_folders:
+            shutil.rmtree(folder_path)
+            print(f"[削除] {folder_path}")
+
+def main():
+    urls = load_urls()
+    if not urls:
+        print("urls.txt にURLがありません")
+        sys.exit(0)
+
+    for url in urls:
+        folder = save_html(url)
+        send_to_archive(url)
+
+    remove_unused_folders(urls)
 
 if __name__ == "__main__":
-    size = get_repo_size_mb()
-    if size > MAX_SIZE_MB:
-        print("⚠ 容量が上限に近いです。別リポジトリへ移行を検討してください。")
-    for url in URLS:
-        save_snapshot(url)
+    main()
+
