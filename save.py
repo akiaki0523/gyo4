@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 import requests
 
-URL_FILE = "urls.txt"  # 保存対象URL一覧
+URL_FILE = "urls.txt"  # 保存対象URL一覧（1件だけ想定）
 
 if not os.path.exists(URL_FILE):
     print(f"{URL_FILE} が見つかりません。終了します。")
@@ -32,7 +32,7 @@ for url in urls:
         # 削除判定: リダイレクト先URLに /board/ が含まれない場合（トップページなど）
         if "/board/" not in response.url:
             print(f"削除検出 → 保存停止: {url} （最終到達: {response.url}）")
-            continue
+            exit(0)  # 即終了
 
         if response.status_code == 200:
             with open(file_path, "w", encoding="utf-8") as f:
