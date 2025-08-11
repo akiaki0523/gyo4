@@ -1,68 +1,45 @@
 import os
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
+import re
 from datetime import datetime
+import requests
 
-def save_offline_page(url):
-    # タイムスタンプ生成
+URL_FILE = "urls.txt"  # 保存対象URL一覧
+
+if not os.path.exists(URL_FILE):
+    print(f"{URL_FILE} が見つかりません。終了します。")
+    exit(1)
+
+with open(URL_FILE, "r", encoding="utf-8") as f:
+    urls = [line.strip() for line in f if line.strip()]
+
+if not urls:
+    print("保存対象URLがありません。終了します。")
+    exit(0)
+
+for url in urls:
+    # フォルダ名に使える形へ変換
+    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', url.replace('https://', '').replace('http://', ''))
+    folder_path = os.path.join("data", safe_name)
+    os.makedirs(folder_path, exist_ok=True)
+
     timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
-    domain = urlparse(url).netloc.replace(":", "_")
-    save_dir = os.path.join("data", domain, timestamp)
-    os.makedirs(save_dir, exist_ok=True)
+    file_path = os.path.join(folder_path, f"{timestamp}.html")
 
-    print(f"[INFO] 保存先: {save_dir}")
+    try:
+        # allow_redirects=True で最終到達URL取得
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15, allow_redirects=True)
 
-    # HTML取得
-    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-    response.raise_for_status()
-    html_content = response.text
+        # 削除判定: リダイレクト先URLに /board/ が含まれない場合（トップページなど）
+        if "/board/" not in response.url:
+            print(f"削除検出 → 保存停止: {url} （最終到達: {response.url}）")
+            continue
 
-    soup = BeautifulSoup(html_content, "html.parser")
+        if response.status_code == 200:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(response.text)
+            print(f"保存完了: {file_path}")
+        else:
+            print(f"ページ取得失敗 (status {response.status_code}): {url}")
 
-    # 画像・CSSなどをダウンロード
-    for tag in soup.find_all(["img", "link", "script"]):
-        attr = "src" if tag.name != "link" else "href"
-        if tag.has_attr(attr):
-            file_url = urljoin(url, tag[attr])
-            parsed = urlparse(file_url)
-            if parsed.scheme.startswith("http"):
-                try:
-                    file_name = os.path.basename(parsed.path)
-                    if not file_name:
-                        file_name = "index"
-                    file_path = os.path.join(save_dir, file_name)
-                    
-                    # ダウンロード
-                    r = requests.get(file_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-                    r.raise_for_status()
-                    with open(file_path, "wb") as f:
-                        f.write(r.content)
-
-                    # HTML内リンク書き換え
-                    tag[attr] = file_name
-                except Exception as e:
-                    print(f"[WARN] {file_url} の取得に失敗: {e}")
-
-    # HTML保存
-    html_path = os.path.join(save_dir, "index.html")
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(str(soup))
-
-    print(f"[DONE] オフライン保存完了: {html_path}")
-
-if __name__ == "__main__":
-    urls_file = "urls.txt"
-    if not os.path.exists(urls_file):
-        print("urls.txt が見つかりません")
-        exit(1)
-
-    with open(urls_file, "r", encoding="utf-8") as f:
-        urls = [line.strip() for line in f if line.strip()]
-
-    if not urls:
-        print("URLを指定してください")
-        exit(1)
-
-    for url in urls:
-        save_offline_page(url)
+    except requests.exceptions.RequestException as e:
+        print(f"取得エラー: {url} - {e}")
