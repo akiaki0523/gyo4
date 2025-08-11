@@ -1,14 +1,20 @@
 import os
 import re
 import time
+import sys
 from datetime import datetime
 import requests
 
-URL_FILE = "urls.txt"  # 保存対象URL一覧（1件でもOK）
+URL_FILE = "urls.txt"  # 保存対象URL一覧
 SAVE_INTERVAL = 600    # 保存間隔（秒）= 10分
-MAX_HOURS = 6          # 最大実行時間（時間）
+MAX_HOURS = 6          # 実行時間（時間）
 
-# URLリスト読み込み
+# コマンドライン引数から履歴名を受け取る
+if len(sys.argv) > 1:
+    history_label = sys.argv[1]
+else:
+    history_label = "history1"
+
 if not os.path.exists(URL_FILE):
     print(f"{URL_FILE} が見つかりません。終了します。")
     exit(1)
@@ -25,7 +31,7 @@ end_time = start_time + MAX_HOURS * 3600
 
 for url in urls:
     safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', url.replace('https://', '').replace('http://', ''))
-    folder_path = os.path.join("data", safe_name)
+    folder_path = os.path.join("data", history_label, safe_name)
     os.makedirs(folder_path, exist_ok=True)
 
     run_count = 0
@@ -36,7 +42,7 @@ for url in urls:
         try:
             response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15, allow_redirects=True)
 
-            # 削除検出（トップに戻ったら中止）
+            # 掲示板トップに戻ったら終了
             if "/board/" not in response.url:
                 print(f"削除検出 → 保存停止: {url} （最終到達: {response.url}）")
                 break
@@ -51,7 +57,7 @@ for url in urls:
         except requests.exceptions.RequestException as e:
             print(f"取得エラー: {url} - {e}")
 
-        # index.html作成・更新
+        # index.html 更新
         html_files = sorted([f for f in os.listdir(folder_path) if f.endswith(".html") and f != "index.html"])
         index_path = os.path.join(folder_path, "index.html")
         with open(index_path, "w", encoding="utf-8") as index_file:
