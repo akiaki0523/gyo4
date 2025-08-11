@@ -20,10 +20,12 @@ jobs:
         run: |
           END_TIME=$((SECONDS + 21600))  # 6時間
           while [ $SECONDS -lt $END_TIME ]; do
+            timestamp=$(date +'%Y%m%d_%H%M%S')
             python save.py history1
-            echo "Upload after each run..."
-            zip -r history1.zip data/history1
-            gh run upload-artifact "saved-pages-history1" history1.zip --overwrite
+            echo "Upload snapshot at $timestamp..."
+            tar -czf history1_$timestamp.tar.gz -C data/history1 .
+            # 個別ファイルとしてアップロード
+            gh upload-artifact "saved-pages-history1-$timestamp" history1_$timestamp.tar.gz
             sleep 600
           done
         env:
@@ -44,10 +46,11 @@ jobs:
         run: |
           END_TIME=$((SECONDS + 21600))  # 6時間
           while [ $SECONDS -lt $END_TIME ]; do
+            timestamp=$(date +'%Y%m%d_%H%M%S')
             python save.py history2
-            echo "Upload after each run..."
-            zip -r history2.zip data/history2
-            gh run upload-artifact "saved-pages-history2" history2.zip --overwrite
+            echo "Upload snapshot at $timestamp..."
+            tar -czf history2_$timestamp.tar.gz -C data/history2 .
+            gh upload-artifact "saved-pages-history2-$timestamp" history2_$timestamp.tar.gz
             sleep 600
           done
         env:
