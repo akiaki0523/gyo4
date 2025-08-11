@@ -1,17 +1,15 @@
-name: Auto Save Webpage
+name: Save pages
 
 on:
-  workflow_dispatch: # 手動実行も可能
   schedule:
-    - cron: "*/10 * * * *"  # 10分ごとに実行
+    - cron: '*/10 * * * *'  # 10分ごとに実行
+  workflow_dispatch:
 
 jobs:
-  run-python:
+  save:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -19,9 +17,15 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install requests
 
-      - name: Run save.py
+      - name: Run save script
         run: python save.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "Auto save pages" || echo "No changes to commit"
+          git push
