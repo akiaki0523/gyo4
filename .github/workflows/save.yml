@@ -8,8 +8,6 @@ on:
 jobs:
   history1:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
-
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -18,19 +16,22 @@ jobs:
       - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - run: python save.py history1
-      - name: Upload history1
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: saved-pages-history1
-          path: data/history1/
+      - name: Loop save for 6 hours (history1)
+        run: |
+          END_TIME=$((SECONDS + 21600))  # 6時間
+          while [ $SECONDS -lt $END_TIME ]; do
+            python save.py history1
+            echo "Upload after each run..."
+            zip -r history1.zip data/history1
+            gh run upload-artifact "saved-pages-history1" history1.zip --overwrite
+            sleep 600
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   history2:
     needs: history1
     runs-on: ubuntu-latest
-    timeout-minutes: 360
-
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -39,10 +40,15 @@ jobs:
       - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - run: python save.py history2
-      - name: Upload history2
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: saved-pages-history2
-          path: data/history2/
+      - name: Loop save for 6 hours (history2)
+        run: |
+          END_TIME=$((SECONDS + 21600))  # 6時間
+          while [ $SECONDS -lt $END_TIME ]; do
+            python save.py history2
+            echo "Upload after each run..."
+            zip -r history2.zip data/history2
+            gh run upload-artifact "saved-pages-history2" history2.zip --overwrite
+            sleep 600
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
