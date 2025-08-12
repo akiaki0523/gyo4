@@ -19,13 +19,11 @@ jobs:
       - run: |
           timestamp=$(date +'%Y%m%d_%H%M%S')
           python save.py history1
-          tar -czf history1_${timestamp}.tar.gz -C data/history1 .
-          mv history1_${timestamp}.tar.gz /tmp/
           echo "TIMESTAMP=$timestamp" >> $GITHUB_ENV
       - uses: actions/upload-artifact@v4
         with:
           name: saved-pages-history1-${{ env.TIMESTAMP }}
-          path: /tmp/history1_${{ env.TIMESTAMP }}.tar.gz
+          path: data/history1
 
   save-history2:
     needs: save-history1
@@ -41,10 +39,8 @@ jobs:
       - run: |
           timestamp=$(date +'%Y%m%d_%H%M%S')
           python save.py history2
-          tar -czf history2_${timestamp}.tar.gz -C data/history2 .
-          mv history2_${timestamp}.tar.gz /tmp/
           echo "TIMESTAMP=$timestamp" >> $GITHUB_ENV
       - uses: actions/upload-artifact@v4
         with:
           name: saved-pages-history2-${{ env.TIMESTAMP }}
-          path: /tmp/history2_${{ env.TIMESTAMP }}.tar.gz
+          path: data/history2
