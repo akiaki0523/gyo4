@@ -29,22 +29,19 @@ jobs:
             # 圧縮
             tar -czf history1_$timestamp.tar.gz -C data/history1 .
 
-            # 一時フォルダへ移動（アーティファクト用）
+            # 一時フォルダへ移動
             mv history1_$timestamp.tar.gz /tmp/
 
-            # 即アップロード
-            echo "name=saved-pages-history1-$timestamp" >> $GITHUB_ENV
-            echo "path=/tmp/history1_$timestamp.tar.gz" >> $GITHUB_ENV
-
-            # 呼び出しでアップロード実行
-            gh workflow run actions/upload-artifact@v3 \
-              --with name="saved-pages-history1-$timestamp" \
-              --with path="/tmp/history1_$timestamp.tar.gz" || echo "Upload failed"
+            # タイムスタンプを環境変数にセット
+            echo "TIMESTAMP=$timestamp" >> $GITHUB_ENV
 
             sleep 600
           done
-        env:
-          GH_TOKEN: ${{ github.token }}
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: saved-pages-history1-${{ env.TIMESTAMP }}
+          path: /tmp/history1_${{ env.TIMESTAMP }}.tar.gz
 
   history2:
     needs: history1
@@ -73,15 +70,13 @@ jobs:
             # 一時フォルダへ移動
             mv history2_$timestamp.tar.gz /tmp/
 
-            # 即アップロード
-            echo "name=saved-pages-history2-$timestamp" >> $GITHUB_ENV
-            echo "path=/tmp/history2_$timestamp.tar.gz" >> $GITHUB_ENV
-
-            gh workflow run actions/upload-artifact@v3 \
-              --with name="saved-pages-history2-$timestamp" \
-              --with path="/tmp/history2_$timestamp.tar.gz" || echo "Upload failed"
+            # タイムスタンプを環境変数にセット
+            echo "TIMESTAMP=$timestamp" >> $GITHUB_ENV
 
             sleep 600
           done
-        env:
-          GH_TOKEN: ${{ github.token }}
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: saved-pages-history2-${{ env.TIMESTAMP }}
+          path: /tmp/history2_${{ env.TIMESTAMP }}.tar.gz
