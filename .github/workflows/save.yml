@@ -9,8 +9,8 @@ jobs:
   history1:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
       - run: |
@@ -38,7 +38,7 @@ jobs:
             sleep 600
           done
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: saved-pages-history1-${{ env.TIMESTAMP }}
           path: /tmp/history1_${{ env.TIMESTAMP }}.tar.gz
@@ -47,8 +47,8 @@ jobs:
     needs: history1
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
       - run: |
@@ -76,7 +76,7 @@ jobs:
             sleep 600
           done
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: saved-pages-history2-${{ env.TIMESTAMP }}
           path: /tmp/history2_${{ env.TIMESTAMP }}.tar.gz
