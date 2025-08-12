@@ -3,7 +3,7 @@ name: Save history1 and history2 every 10 minutes
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/7 * * * *"  # 7分ごと
+    - cron: "*/8 * * * *"  # 8分ごと
 
 jobs:
   save-history1:
