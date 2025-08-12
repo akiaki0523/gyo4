@@ -3,7 +3,7 @@ name: Run save.py twice (history1 and history2)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */12 * * *"   # 12時間ごとに開始（UTC基準）
+    - cron: "0 */12 * * *"   # 12時間ごと（UTC基準）
 
 jobs:
   history1:
@@ -16,16 +16,22 @@ jobs:
       - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Loop save for 6 hours (history1)
+      - name: Loop save & upload for 6 hours (history1)
         run: |
           END_TIME=$((SECONDS + 21600))  # 6時間
           while [ $SECONDS -lt $END_TIME ]; do
             timestamp=$(date +'%Y%m%d_%H%M%S')
+
+            # 保存処理
             python save.py history1
-            echo "Upload snapshot at $timestamp..."
+
+            # 圧縮
             tar -czf history1_$timestamp.tar.gz -C data/history1 .
-            # 個別ファイルとしてアップロード
-            gh upload-artifact "saved-pages-history1-$timestamp" history1_$timestamp.tar.gz
+
+            # 即アップロード（ジョブ実行中でも送信）
+            gh release upload "history1" history1_$timestamp.tar.gz --clobber || echo "Upload failed"
+
+            # 次の保存まで待機
             sleep 600
           done
         env:
@@ -36,22 +42,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-      - run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Loop save for 6 hours (history2)
-        run: |
-          END_TIME=$((SECONDS + 21600))  # 6時間
-          while [ $SECONDS -lt $END_TIME ]; do
-            timestamp=$(date +'%Y%m%d_%H%M%S')
-            python save.py history2
-            echo "Upload snapshot at $timestamp..."
-            tar -czf history2_$timestamp.tar.gz -C data/history2 .
-            gh upload-artifact "saved-pages-history2-$timestamp" history2_$timestamp.tar.gz
-            sleep 600
-          done
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/set
