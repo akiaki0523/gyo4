@@ -1,12 +1,12 @@
-name: Run save.py twice (history1 and history2)
+name: Save history1 and history2 every 10 minutes
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */12 * * *"   # 12時間ごと（UTC基準）
+    - cron: "*/10 * * * *"  # 10分ごと
 
 jobs:
-  history1:
+  save-history1:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,31 +16,19 @@ jobs:
       - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          sudo apt-get update
-          sudo apt-get install -y gh  # GitHub CLI
+      - run: |
+          timestamp=$(date +'%Y%m%d_%H%M%S')
+          python save.py history1
+          tar -czf history1_${timestamp}.tar.gz -C data/history1 .
+          mv history1_${timestamp}.tar.gz /tmp/
+          echo "TIMESTAMP=$timestamp" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v4
+        with:
+          name: saved-pages-history1-${{ env.TIMESTAMP }}
+          path: /tmp/history1_${{ env.TIMESTAMP }}.tar.gz
 
-      - name: Loop save & upload for 6 hours (history1)
-        run: |
-          END_TIME=$((SECONDS + 21600))  # 6時間
-          while [ $SECONDS -lt $END_TIME ]; do
-            timestamp=$(date +'%Y%m%d_%H%M%S')
-
-            # 保存処理
-            python save.py history1
-
-            # 圧縮
-            tar -czf /tmp/history1_${timestamp}.tar.gz -C data/history1 .
-
-            # アーティファクトを即時アップロード
-            gh run upload-artifact "saved-pages-history1-${timestamp}" /tmp/history1_${timestamp}.tar.gz
-
-            sleep 600  # 10分待機
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  history2:
-    needs: history1
+  save-history2:
+    needs: save-history1
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,25 +38,13 @@ jobs:
       - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          sudo apt-get update
-          sudo apt-get install -y gh  # GitHub CLI
-
-      - name: Loop save & upload for 6 hours (history2)
-        run: |
-          END_TIME=$((SECONDS + 21600))  # 6時間
-          while [ $SECONDS -lt $END_TIME ]; do
-            timestamp=$(date +'%Y%m%d_%H%M%S')
-
-            # 保存処理
-            python save.py history2
-
-            # 圧縮
-            tar -czf /tmp/history2_${timestamp}.tar.gz -C data/history2 .
-
-            # アーティファクトを即時アップロード
-            gh run upload-artifact "saved-pages-history2-${timestamp}" /tmp/history2_${timestamp}.tar.gz
-
-            sleep 600  # 10分待機
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          timestamp=$(date +'%Y%m%d_%H%M%S')
+          python save.py history2
+          tar -czf history2_${timestamp}.tar.gz -C data/history2 .
+          mv history2_${timestamp}.tar.gz /tmp/
+          echo "TIMESTAMP=$timestamp" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v4
+        with:
+          name: saved-pages-history2-${{ env.TIMESTAMP }}
+          path: /tmp/history2_${{ env.TIMESTAMP }}.tar.gz
